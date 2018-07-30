@@ -12,7 +12,6 @@ def main():
 	for line in data.split('\n'):
 		if line!='':
 			j_data=json.loads(line)
-			print (j_data)
 			for j_tmp in j_data:
 				if j_tmp['type']=='CUSTOMER':
 					cust_lst.append(j_tmp['key'])
@@ -51,3 +50,4 @@ def main():
 
 if __name__=='__main__':
     main()
+    print ("The job execution completed successfully. Please check output directory for the data files")

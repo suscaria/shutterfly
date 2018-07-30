@@ -3,34 +3,49 @@
 # 1: The sample record given is a list of event of a customer. This can be a huge datadump in JSON format.
 # 2: To Writing this script to split the file into multple splits and then process upto 500 files.
 
-# input_files:  /Users/tonys/PycharmProjects/shutterfly/input/input.txt 
-# landing_files:  /Users/tonys/PycharmProjects/shutterfly/land/
+# input_files:  /Users/tonys/PycharmProjects/shutterfly/input/input.txt
+# landing_files:  /Users/tonys/PycharmProjects/shutterfly/split_files/segment
 # No_of_splits: eg: 500
 
 
-if [ -z $1 ] || [ -z $2 ] || [ -z $3 ]
+if [ -z $1 ] || [ -z $2 ]
    then
-     echo "No arguments supplied; please pass filename and number of splits as arg1 and arg2"
+     echo "No arguments supplied; please pass number of splits  and input filename as arg1, arg2"
  else
      echo "The script started processing at "`date +"%d/%m/%Y %H:%M:%S"`
- fi
+fi
 
-export input_file=$1
-export landing_files=$2
-export no_of_splits=$3
-export archive_dir=${landing_files}'/archive/'
+export project_dir='/Users/tonys/PycharmProjects/shutterfly'
+export split_file=${project_dir}'/split_files'
+export no_of_splits=$1
+export input_file=${project_dir}'/input/'$2
+export landing_files=${split_file}/'segment'
+export python_job=${project_dir}'/src/json_parser.py'
+export land_dir=${project_dir}'/land/'
+export output_dir=${project_dir}'/output/'
 
-# find ${landing_files} -name "*txt*" -print0 | xargs -0 -I {} mv {} $archive_dir
 
-split -l $no_of_splits $input_file $output_files
+#remove the previous day files:
 
-for each  in `ls $output_files*`
+rm -f  ${landing_files}*
+rm -f ${output_dir}*
+
+#split files with number of lines
+
+split -l ${no_of_splits} ${input_file} ${landing_files}
+
+#rename the splits to *.txt
+for each  in `ls ${landing_files}*`
 do
 mv $each $each.txt
 done
 
-find /Users/tonys/PycharmProjects/shutterfly/land/ -type f -name "*.txt" -print0 | xargs -0 -L1 -P 500 python /Users/tonys/PycharmProjects/shutterfly/src/json_parser.py
+#passthe json parson job to  parse the input data; 500 is the number of parallel execution
 
-find /Users/tonys/PycharmProjects/shutterfly/land/ -type f -name "*cust*" -exec cat {} + > /Users/tonys/PycharmProjects/shutterfly/output/customers.txt
-find /Users/tonys/PycharmProjects/shutterfly/land/ -type f -name "*clck*" -exec cat {} + > /Users/tonys/PycharmProjects/shutterfly/output/click.txt
-find /Users/tonys/PycharmProjects/shutterfly/land/ -type f -name "*ordr*" -exec cat {} + > /Users/tonys/PycharmProjects/shutterfly/output/orders.txt
+find ${split_file} -type f -name "*.txt" -print0 | xargs -0 -L1 -P 500 python ${python_job}
+
+#Merge each process files into single output data feeds for loading into hive/ rdbms
+find ${land_dir} -type f -name "*cust*" -exec cat {} + > ${output_dir}customers.txt
+find ${land_dir} -type f -name "*clck*" -exec cat {} + > ${output_dir}/click.txt
+find ${land_dir} -type f -name "*ordr*" -exec cat {} + > ${output_dir}/orders.txt
+
